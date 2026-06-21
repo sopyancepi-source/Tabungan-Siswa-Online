@@ -1,0 +1,6 @@
+{
+  "name": "Tabungan Siswa",
+  "description": "Aplikasi Manajemen Tabungan Siswa Sekolah Terintegrasi, lengkap dengan pencatatan kas, kredit/pinjaman guru, dan setor koperasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

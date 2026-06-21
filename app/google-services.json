@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "123984391958",
+    "project_id": "tabsis-online-d3d5a",
+    "storage_bucket": "tabsis-online-d3d5a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123984391958:android:347a3097fdc6bd9bfe2a37",
+        "android_client_info": {
+          "package_name": "com.aistudio.tabungansiswa.wfzrcz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFpbzWnQZnvedbvoXumB_0XYxWDJO7iDk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="108"
+                android:endY="108"
+                android:startX="0"
+                android:startY="0"
+                android:type="linear">
+                <item
+                    android:color="#0D47A1"
+                    android:offset="0.0" />
+                <item
+                    android:color="#1976D2"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Modern geometric background arches for visually appealing abstract contrast -->
+    <path
+        android:fillColor="#12FFFFFF"
+        android:pathData="M108,0 C70,0 40,30 40,68 C40,84 48,98 60,108 L108,108 Z" />
+    <path
+        android:fillColor="#08FFFFFF"
+        android:pathData="M0,108 C30,108 60,78 60,40 C60,24 52,10 40,0 L0,0 Z" />
+</vector>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle Ambient Backdrop Plate for Contrast (Safekeeping everything inside 72dp center) -->
+    <path
+        android:fillColor="#1AFFFFFF"
+        android:pathData="M54,20 A34,34 0,1,1 54,88 A34,34 0,1,1 54,20 Z" />
+
+    <!-- === PART 1: THE SAVINGS BOOK (Buku Tabungan) === -->
+    <!-- Shadow under the Book -->
+    <path
+        android:fillColor="#1C000000"
+        android:pathData="M24,78 C24,74 84,74 84,78 C84,81 24,81 24,78 Z" />
+
+    <!-- Open Savings Book Cover (Royal/Cyan Accent) -->
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M26,56 Q24,56 24,58 L24,73 Q24,75 26,75 L82,75 Q84,75 84,73 L84,58 Q84,56 82,56 L54,58 Z" />
+
+    <!-- Open Book Pages Left Side (Pure White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M27,53 L52,55 L52,71 L27,69 Z" />
+
+    <!-- Open Book Pages Right Side (Pure White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M81,53 L56,55 L56,71 L81,69 Z" />
+
+    <!-- Book Spine/Center Binding (Light Blue Accent) -->
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M52,55 L56,55 L56,72 L52,72 Z" />
+
+    <!-- Passbook Grid Lines Left Page (Simulated saving logs) -->
+    <path
+        android:strokeColor="#BBDEFB"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M30,58 L48,59 M30,62 L45,63 M30,66 L42,67" />
+
+    <!-- Passbook Grid Lines Right Page (Simulated saving logs) -->
+    <path
+        android:strokeColor="#BBDEFB"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M78,58 L60,59 M78,62 L63,63 M78,66 L66,67" />
+
+
+    <!-- === PART 2: STUDENT SKETCH / SILHOUETTE (Sketsa Siswa) === -->
+    <!-- Glowing Aura Behind the Student -->
+    <path
+        android:fillColor="#3DFFFFFF"
+        android:pathData="M54,23 A15,15 0,1,1 54,53 A15,15 0,1,1 54,23 Z" />
+
+    <!-- Student Torso / Shoulders with School Uniform Collar (Pure White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,51 C40,43 68,43 68,51 L68,53 L40,53 Z" />
+
+    <!-- School Red/White Tie Sketch (Vibrant Red Accent matching Indonesian student tie) -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M52,48 L56,48 L58,54 L54,58 L50,54 Z" />
+
+    <!-- Student Head Circle Silhouette (Pure White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,29 A8,8 0,1,1 54,45 A8,8 0,1,1 54,29 Z" />
+
+    <!-- Student Hair/Side Profile Sketch (Cyan Accent) -->
+    <path
+        android:fillColor="#0D47A1"
+        android:pathData="M48,34 Q48,27 54,27 Q60,27 60,34 Q57,32 54,34 Q51,32 48,34 Z" />
+
+    <!-- Student School Cap Outline (Topi Sekolah) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="#1565C0"
+        android:pathData="M48,27 L60,27 L54,23 Z" />
+
+
+    <!-- === PART 3: EMBELLISHMENTS & SPARKS === -->
+    <!-- Sparkle/Success Indicator Left (White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,38 L24.5,41 L27.5,41.5 L24.8,42.5 L24,45.5 L23.2,42.5 L20.5,41.5 L23.5,41 Z" />
+
+    <!-- Sparkle/Success Indicator Right (White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M84,33 L85.5,36 L88.5,36.5 L85.8,37.5 L85,40.5 L84.2,37.5 L81.5,36.5 L84.5,36 Z" />
+
+    <!-- Small Golden Currency Token Spark (Representation of Saving) -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M76,46 A4,4 0,1,1 76,54 A4,4 0,1,1 76,46 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,49 L76,50 L77,49 L76,51 Z" />
+
+</vector>
