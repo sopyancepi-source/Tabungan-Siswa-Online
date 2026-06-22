@@ -9,19 +9,51 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class FirebaseSyncManager(
     private val context: Context,
     private val repository: TabunganRepository
 ) {
     private val databaseUrl = "https://tabsis-online-d3d5a-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    private val database = FirebaseDatabase.getInstance(databaseUrl)
+    private val database = FirebaseDatabase.getInstance(databaseUrl).apply {
+        try {
+            setPersistenceEnabled(true)
+            // Keep critical tables synced locally
+            getReference("siswa").keepSynced(true)
+            getReference("transaksi").keepSynced(true)
+            getReference("pinjaman_sekolah").keepSynced(true)
+            getReference("pinjaman_guru").keepSynced(true)
+            getReference("admin_kas").keepSynced(true)
+            getReference("setor_koperasi").keepSynced(true)
+            getReference("settings").keepSynced(true)
+        } catch (e: java.lang.Exception) {
+            Log.e("FirebaseSyncManager", "Failed to configure disk persistence / syncing: ${e.message}")
+        }
+    }
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // Flag to prevent update loop (uploading down-synced data back to Firebase)
+    // Thread-safe maps to handle synchronization states per table node
+    private val isDownloadingMap = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val isInitializedMap = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    // Cached variables to prevent infinite update loops
     @Volatile
-    private var isDownloadingLocalChanges = false
+    private var lastSiswaList: List<Siswa>? = null
+
+    @Volatile
+    private var lastTransaksiList: List<Transaksi>? = null
+
+    @Volatile
+    private var lastPinjamanSekolahList: List<PinjamanSekolah>? = null
+
+    @Volatile
+    private var lastPinjamanGuruList: List<PinjamanGuru>? = null
+
+    @Volatile
+    private var lastAdminKasList: List<AdminKas>? = null
+
+    @Volatile
+    private var lastSetorKoperasiList: List<SetorKoperasi>? = null
 
     private val sharedPrefs by lazy {
         context.getSharedPreferences("user_credentials_v1", Context.MODE_PRIVATE)
@@ -29,8 +61,29 @@ class FirebaseSyncManager(
 
     fun startSyncing() {
         Log.d("FirebaseSyncManager", "Starting Real-Time Firebase Database Sync...")
+        setupConnectionListener()
         setupFirebaseListeners()
         setupRoomFlowUploads()
+    }
+
+    /**
+     * Listen to active connection changes to optimize reconnection and force online sync.
+     */
+    private fun setupConnectionListener() {
+        database.getReference(".info/connected").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val connected = snapshot.getValue(Boolean::class.java) ?: false
+                Log.d("FirebaseSyncManager", "Firebase connection status: $connected")
+                if (connected) {
+                    Log.d("FirebaseSyncManager", "Firebase is connected and sync is active.")
+                } else {
+                    Log.d("FirebaseSyncManager", "Firebase is currently offline/disconnected. Changes will be synchronized automatically upon reconnection.")
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("FirebaseSyncManager", "Connection listener cancelled: ${error.message}")
+            }
+        })
     }
 
     /**
@@ -50,12 +103,20 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastSiswaList == list) {
+                            // Perfect identity, mark initialized and exit to avoid circular loops
+                            isInitializedMap["siswa"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["siswa"] = true
+                        lastSiswaList = list
                         repository.replaceAllSiswa(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["siswa"] = true
+                        isDownloadingMap["siswa"] = false
                         Log.d("FirebaseSyncManager", "Siswa synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["siswa"] = false
                         Log.e("FirebaseSyncManager", "Error syncing Siswa: ${e.message}")
                     }
                 }
@@ -77,12 +138,19 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastTransaksiList == list) {
+                            isInitializedMap["transaksi"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["transaksi"] = true
+                        lastTransaksiList = list
                         repository.replaceAllTransaksi(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["transaksi"] = true
+                        isDownloadingMap["transaksi"] = false
                         Log.d("FirebaseSyncManager", "Transaksi synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["transaksi"] = false
                         Log.e("FirebaseSyncManager", "Error syncing Transaksi: ${e.message}")
                     }
                 }
@@ -104,12 +172,19 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastPinjamanSekolahList == list) {
+                            isInitializedMap["pinjaman_sekolah"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["pinjaman_sekolah"] = true
+                        lastPinjamanSekolahList = list
                         repository.replaceAllPinjamanSekolah(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["pinjaman_sekolah"] = true
+                        isDownloadingMap["pinjaman_sekolah"] = false
                         Log.d("FirebaseSyncManager", "PinjamanSekolah synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["pinjaman_sekolah"] = false
                         Log.e("FirebaseSyncManager", "Error syncing PinjamanSekolah: ${e.message}")
                     }
                 }
@@ -131,12 +206,19 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastPinjamanGuruList == list) {
+                            isInitializedMap["pinjaman_guru"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["pinjaman_guru"] = true
+                        lastPinjamanGuruList = list
                         repository.replaceAllPinjamanGuru(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["pinjaman_guru"] = true
+                        isDownloadingMap["pinjaman_guru"] = false
                         Log.d("FirebaseSyncManager", "PinjamanGuru synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["pinjaman_guru"] = false
                         Log.e("FirebaseSyncManager", "Error syncing PinjamanGuru: ${e.message}")
                     }
                 }
@@ -158,12 +240,19 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastAdminKasList == list) {
+                            isInitializedMap["admin_kas"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["admin_kas"] = true
+                        lastAdminKasList = list
                         repository.replaceAllAdminKas(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["admin_kas"] = true
+                        isDownloadingMap["admin_kas"] = false
                         Log.d("FirebaseSyncManager", "AdminKas synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["admin_kas"] = false
                         Log.e("FirebaseSyncManager", "Error syncing AdminKas: ${e.message}")
                     }
                 }
@@ -185,12 +274,19 @@ class FirebaseSyncManager(
                                 list.add(item)
                             }
                         }
-                        isDownloadingLocalChanges = true
+                        if (lastSetorKoperasiList == list) {
+                            isInitializedMap["setor_koperasi"] = true
+                            return@launch
+                        }
+                        
+                        isDownloadingMap["setor_koperasi"] = true
+                        lastSetorKoperasiList = list
                         repository.replaceAllSetorKoperasi(list)
-                        isDownloadingLocalChanges = false
+                        isInitializedMap["setor_koperasi"] = true
+                        isDownloadingMap["setor_koperasi"] = false
                         Log.d("FirebaseSyncManager", "SetorKoperasi synced from Firebase: ${list.size} items")
                     } catch (e: Exception) {
-                        isDownloadingLocalChanges = false
+                        isDownloadingMap["setor_koperasi"] = false
                         Log.e("FirebaseSyncManager", "Error syncing SetorKoperasi: ${e.message}")
                     }
                 }
@@ -234,66 +330,157 @@ class FirebaseSyncManager(
 
     /**
      * Listen to local Room Flow changes and upload them immediately to Firebase
-     * if we are not currently downloading changes from Firebase.
+     * ONLY if our app has successfully downloaded/connected to Firebase at least once
+     * and we are not currently downloading changes from Firebase for that specific table.
      */
     private fun setupRoomFlowUploads() {
         // Siswa Upload
         scope.launch {
             repository.allSiswa.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated Siswa list to Firebase... Total: ${list.size}")
-                    database.getReference("siswa").setValue(list)
+                val isInitialized = isInitializedMap["siswa"] ?: false
+                val isDownloading = isDownloadingMap["siswa"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed Siswa upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed Siswa upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastSiswaList == list) {
+                    Log.d("FirebaseSyncManager", "Siswa list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastSiswaList = list
+                Log.d("FirebaseSyncManager", "Uploading updated Siswa list to Firebase... Total: ${list.size}")
+                database.getReference("siswa").setValue(list)
             }
         }
 
         // Transaksi Upload
         scope.launch {
             repository.allTransaksi.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated Transaksi list to Firebase... Total: ${list.size}")
-                    database.getReference("transaksi").setValue(list)
+                val isInitialized = isInitializedMap["transaksi"] ?: false
+                val isDownloading = isDownloadingMap["transaksi"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed Transaksi upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed Transaksi upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastTransaksiList == list) {
+                    Log.d("FirebaseSyncManager", "Transaksi list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastTransaksiList = list
+                Log.d("FirebaseSyncManager", "Uploading updated Transaksi list to Firebase... Total: ${list.size}")
+                database.getReference("transaksi").setValue(list)
             }
         }
 
         // Pinjaman Sekolah Upload
         scope.launch {
             repository.allPinjamanSekolah.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated PinjamanSekolah list to Firebase... Total: ${list.size}")
-                    database.getReference("pinjaman_sekolah").setValue(list)
+                val isInitialized = isInitializedMap["pinjaman_sekolah"] ?: false
+                val isDownloading = isDownloadingMap["pinjaman_sekolah"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed PinjamanSekolah upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed PinjamanSekolah upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastPinjamanSekolahList == list) {
+                    Log.d("FirebaseSyncManager", "PinjamanSekolah list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastPinjamanSekolahList = list
+                Log.d("FirebaseSyncManager", "Uploading updated PinjamanSekolah list to Firebase... Total: ${list.size}")
+                database.getReference("pinjaman_sekolah").setValue(list)
             }
         }
 
         // Pinjaman Guru Upload
         scope.launch {
             repository.allPinjamanGuru.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated PinjamanGuru list to Firebase... Total: ${list.size}")
-                    database.getReference("pinjaman_guru").setValue(list)
+                val isInitialized = isInitializedMap["pinjaman_guru"] ?: false
+                val isDownloading = isDownloadingMap["pinjaman_guru"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed PinjamanGuru upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed PinjamanGuru upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastPinjamanGuruList == list) {
+                    Log.d("FirebaseSyncManager", "PinjamanGuru list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastPinjamanGuruList = list
+                Log.d("FirebaseSyncManager", "Uploading updated PinjamanGuru list to Firebase... Total: ${list.size}")
+                database.getReference("pinjaman_guru").setValue(list)
             }
         }
 
         // Admin Kas Upload
         scope.launch {
             repository.allAdminKas.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated AdminKas list to Firebase... Total: ${list.size}")
-                    database.getReference("admin_kas").setValue(list)
+                val isInitialized = isInitializedMap["admin_kas"] ?: false
+                val isDownloading = isDownloadingMap["admin_kas"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed AdminKas upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed AdminKas upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastAdminKasList == list) {
+                    Log.d("FirebaseSyncManager", "AdminKas list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastAdminKasList = list
+                Log.d("FirebaseSyncManager", "Uploading updated AdminKas list to Firebase... Total: ${list.size}")
+                database.getReference("admin_kas").setValue(list)
             }
         }
 
         // Setor Koperasi Upload
         scope.launch {
             repository.allSetorKoperasi.collectLatest { list ->
-                if (!isDownloadingLocalChanges) {
-                    Log.d("FirebaseSyncManager", "Uploading updated SetorKoperasi list to Firebase... Total: ${list.size}")
-                    database.getReference("setor_koperasi").setValue(list)
+                val isInitialized = isInitializedMap["setor_koperasi"] ?: false
+                val isDownloading = isDownloadingMap["setor_koperasi"] ?: false
+                
+                if (!isInitialized) {
+                    Log.d("FirebaseSyncManager", "Suppressed SetorKoperasi upload: Node is not yet initialized from Firebase.")
+                    return@collectLatest
                 }
+                if (isDownloading) {
+                    Log.d("FirebaseSyncManager", "Suppressed SetorKoperasi upload: Node is currently downloading modifications from Firebase.")
+                    return@collectLatest
+                }
+                if (lastSetorKoperasiList == list) {
+                    Log.d("FirebaseSyncManager", "SetorKoperasi list is identical to last seen, skipping upload.")
+                    return@collectLatest
+                }
+                
+                lastSetorKoperasiList = list
+                Log.d("FirebaseSyncManager", "Uploading updated SetorKoperasi list to Firebase... Total: ${list.size}")
+                database.getReference("setor_koperasi").setValue(list)
             }
         }
     }
